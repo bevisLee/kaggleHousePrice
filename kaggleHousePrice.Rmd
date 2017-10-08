@@ -98,7 +98,7 @@ X_test <- train_test_double %>% .[(ntrain + 1):nrow(train_test_double),]
 train_XY <- cbind(X_train, SalePrice)
 ```
 
-## 3. 알고리즘별 최적화 : XGBoost
+## 3. 알고리즘별 최적화 : XGBoost / LB : 0.20344
 ```{r}
 if (!require("xgboost")) { install.packages("xgboost") }
 
@@ -121,4 +121,131 @@ searchGridSubCol <- expand.grid(subsample = seq(0.5, 1, by = 0.05),
 head(searchGridSubCol)
 
 ```
+
+##### Hyper Parameters XGBoost data frame 생성
+
+```{r}
+rmseErrorsHyperparameters_xgb <- data.frame()
+```
+
+#### Hyper Parameters 실행 및 결과 "rmseErrorsHyperparameters_xgb" 에 저장
+
+```{r}
+# 전체 실행 코드 -> for (i in 1:nrow(searchGridSubCol)) { 
+for (i in 1:1) {
+    #Extract Parameters to test
+    currentSubsampleRate <- searchGridSubCol[i, 1]
+    currentColsampleRate <- searchGridSubCol[i, 2]
+    ntreesNum <- searchGridSubCol[i, 3]
+
+    xgboostModelCV <- xgb.cv(data = dtrain, nrounds = ntreesNum, nfold = 5, showsd = TRUE,
+                           metrics = "rmse", verbose = TRUE, "eval_metric" = "rmse",
+                           "objective" = "reg:linear", "max.depth" = 15, "eta" = 2 / ntreesNum, "subsample" = currentSubsampleRate, "colsample_bytree" = currentColsampleRate, booster = "gbtree")
+
+    xgboostModelCV_Score <- xgboostModelCV$evaluation_log$test_rmse_mean
+    xvalidationScores <- as.data.frame(xgboostModelCV_Score)
+    #Save rmse of the last iteration
+    rmse <- tail(xvalidationScores$xgboostModelCV_Score, 1)
+
+    rmseErrorsHyperparameters_xgb_1 <- data.frame(rmse, currentSubsampleRate, currentColsampleRate, ntreesNum)
+    rmseErrorsHyperparameters_xgb <- rbind(rmseErrorsHyperparameters_xgb, rmseErrorsHyperparameters_xgb_1)
+}
+
+rmseErrorsHyperparameters_xgb
+```
+
+##### Hyper Parameters 중 rmse가 가장 낮은 값을 예측 모델에 적용
++ subsample : 0.95 / colsample_bytree : 0.55 / ntrees : 200 -> RMSE : 39869.81  
+####  XGBoost 예측 모델 실행 : 예측 모델 에러로 주석 처리
+
+```{r}
+### prediction---------------------------
+currentSubsampleRate <- 0.95
+currentColsampleRate <- 0.55
+ntreesNum <- 200
+
+bst <- xgb.cv(data = dtrain, nrounds = ntreesNum, nfold = 5, showsd = TRUE,
+              metrics = "rmse", verbose = TRUE, "eval_metric" = "rmse",
+              "objective" = "reg:linear", "max.depth" = 15, "eta" = 2 / ntreesNum, "subsample" = currentSubsampleRate,
+              "colsample_bytree" = currentColsampleRate, booster = "gbtree")
+
+### prediction result save
+pred <- data.frame(test_id, xgb_pred <- predict(bst, dtest))
+colnames(pred) <- c("Id", "SalePrice")
+
+write.csv(pred, paste0("C:/Users/bevis/Downloads/House_Prices_Advanced_Regression_Techniques/xgb_Hyper_Parameters", format(Sys.time(), "%Y%b%d_%H%M%S"), ".csv ", sep = " "), quote = F, row.names = F)
+
+```
+
+####  XGBoost 예측 결과 LB Score : 0.20344
+
+## 4. 알고리즘별 최적화 : RandomForest / LB : 0.14645
+
+```{r}
+if (!require("randomForest")) { install.packages("randomForest") }
+if (!require("caret")) { install.packages("caret") }
+```
+
+####  Hyper Parameters : Build a RandomForest object
+##### 참고 - https://machinelearningmastery.com/tune-machine-learning-algorithms-in-r/
+
++ mtry = "15, 16, 17, 18, ... , 28, 29, 30"
++ ntree = "1000, 1100, 1200, ... , 2300, 2400, 2500"
+
+```{r}
+seed <- 7
+control <- trainControl(method = "repeatedcv", number = 10, repeats = 3, search = "grid")
+
+tunegrid <- expand.grid(.mtry = c(29)) # 15:30
+
+##### function
+rmseErrorsHyperparameters_rf <- list()
+
+# ntree 100:2500
+# 전체 실행 코드 -> for (ntree in seq(1000, 2500, by = 100)) {
+for (ntree in 1000) {
+    set.seed(seed)
+    fit <- train(SalePrice ~ ., data = train_xy, method = "rf",
+                 tuneGrid = tunegrid, trControl = control, ntree = ntree)
+    key <- toString(ntree)
+    rmseErrorsHyperparameters_rf[[key]] <- fit
+}
+
+rmseErrorsHyperparameters_rf
+```
+
+##### Hyper Parameters 중 rmse가 가장 낮은 값을 예측 모델에 적용
+tail(rmseErrorsHyperparameters_rf$`1000`$results, 1) # 100~2500
+
++ tail(rmseErrorsHyperparameters_rf$`1200`$results,1)
++ mtry RMSE Rsquared MAE RMSESD RsquaredSD MAESD
++ 29 28876.83 0.8789629 16639.8 5809.037 0.05163747 1948.213
+
++ tail(rmseErrorsHyperparameters_rf$`1000`$results,1)
++ mtry RMSE Rsquared MAE RMSESD RsquaredSD MAESD
++ 29 28879.71 0.8789424 16639.33 5822.773 0.05140685 1943.522
+
++ tail(rmseErrorsHyperparameters_rf$`1100`$results,1)
++ mtry RMSE Rsquared MAE RMSESD RsquaredSD MAESD
++ 29 28883.11 0.8789304 16638.15 5815.917 0.05154836 
+
+####  RandomForest 예측 모델 실행
+
+```{r}
+### prediction---------------------------
+tunegrid <- expand.grid(.mtry = 29)
+ntree = 1200
+
+rf_model <- train(SalePrice ~ ., data = train_xy, method = "rf",
+                 tuneGrid = tunegrid, trControl = control, ntree = ntree)
+
+# prediction result save
+pred <- data.frame(test_id, rf_pred <- predict(rf_model, test_x))
+colnames(pred) <- c("Id","SalePrice")
+
+write.csv(pred, paste0("C:/Users/bevis/Downloads/House_Prices_Advanced_Regression_Techniques/rf_Hyper_Parameters", format(Sys.time(), "%Y%b%d_%H%M%S"), ".csv ", sep = " "), quote = F, row.names = F)
+```
+####  RandomForest 예측 결과 LB Score : 0.14645
+
+## 5. 알고리즘별 최적화 : Support Vector Machines / LB : 0.43200
 
