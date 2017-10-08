@@ -5,12 +5,19 @@ date: "2017년 10월 8일"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+## House Price Advanced Regression_Ensemble 순서
+1. 데이터 전처리
+2. 학습을 위해 데이터 타입 변경
+3. 알고리즘별 최적화 : XGBoost
+4. 알고리즘별 최적화 : RandomForest
+5. 알고리즘별 최적화 : SVM
+6. 알고리즘별 최적화 : Keras
+7. Ensemble
+8. 기타 : h2o Ensemble
 
-## 데이터 준비
-##### 전처리가 끝난 train 과 test 데이터를 불러온다.
+## 1. 데이터 전처리 
++ 데이터 준비
++ 전처리가 끝난 train 과 test 데이터를 불러온다.
 
 ```{r}
 x.train <- read.csv("C:/Users/bevis/Downloads/House_Prices_Advanced_Regression_Techniques/train_eda.csv")
@@ -21,23 +28,23 @@ x.train <- x.train[, -1]
 x.test <- x.test[, -1]
 ```
 
-### train data 파악
-##### int, factor, num 형태로 존재
++ train data 파악
++ int, factor, num 형태로 존재
 
 ```{r}
 str(x.train)
 ```
 
-### test data 파악
-##### train data와 동일하게 int, factor, num 형태로 존재하나, $ Alley 와 같은 컬럼에서 train data에서 없었던 level("missing") 이 존재하는 경우를 파악할 수 있다. 따라서, 2개의 데이터간에 factor level을 맞추는 작업이 필요하다.
++ test data 파악
++ train data와 동일하게 int, factor, num 형태로 존재하나, $ Alley 와 같은 컬럼에서 train data에서 없었던 level("missing") 이 존재하는 경우를 파악할 수 있다. 따라서, 2개의 데이터간에 factor level을 맞추는 작업이 필요하다.
 
 ```{r}
 str(x.test)
 ```
 
-## 예측 분석을 위해 데이터 수정
-##### SVM, RandomForest
-##### train, test factor level 맞춰 재생성
+## 2. 학습을 위해 데이터 타입 변경
++ 학습에 사용될 알고리즘 : SVM, RandomForest
++ train, test factor level 맞춰 재생성
 
 ```{r warning=FALSE}
 if (!require("dplyr")) { install.packages("dplyr") }
@@ -69,10 +76,10 @@ train_xy <- cbind(train_x, SalePrice)
 
 ```
 
-##### Keras, XGBoost
-##### tensorflow를 돌리기 위해선 factor(이산형 변수)의 타입을 수정해야 한다. 방법은 2가지가 있다. 이산형 변수 속성별로 컬럼을 생성하여 "1,0" 값으로 추가하는 방식 과 이산형 변수의 관측치(level) 값으로 변경하는 방식이 있다.
-##### 수정 작업은 factor level 값으로 대체하는 방식을 택하였다. 
-##### train, test factor level 맞춰 재생성
++ 학습에 사용될 알고리즘 : Keras(tensorflow), XGBoost
++ tensorflow를 돌리기 위해선 factor(이산형 변수)의 타입을 수정해야 한다. 방법은 2가지가 있다. 이산형 변수 속성별로 컬럼을 생성하여 "1,0" 값으로 추가하는 방식 과 이산형 변수의 관측치(level) 값으로 변경하는 방식이 있다.
++ 수정 작업은 factor level 값으로 대체하는 방식을 택하였다. 
++ train, test factor level 맞춰 재생성
 
 ```{r warning=FALSE}
 ## factor에서 numeric 변경 : Keras
@@ -91,10 +98,27 @@ X_test <- train_test_double %>% .[(ntrain + 1):nrow(train_test_double),]
 train_XY <- cbind(X_train, SalePrice)
 ```
 
-### XGBoost 실행
+## 3. 알고리즘별 최적화 : XGBoost
 ```{r}
 if (!require("xgboost")) { install.packages("xgboost") }
 
 dtrain <- xgb.DMatrix(as.matrix(X_train), label = SalePrice)
 dtest <- xgb.DMatrix(as.matrix(X_test))
 ```
+
+####  Hyper Parameters : Build a xgb.DMatrix object
+##### 참고 - https://datascience.stackexchange.com/questions/9364/hypertuning-xgboost-parameters
+
++ subsample = "0.5, 0.55, 0.6, 0.65, ... , 0.95, 1.0"
++ colsample_bytree = "0.5, 0.55, 0.6, 0.65, ... , 0.95, 1.0"
++ ntrees = "100, 200, 300, ... , 800, 900, 1000"
+
+```{r}
+searchGridSubCol <- expand.grid(subsample = seq(0.5, 1, by = 0.05),
+                                colsample_bytree = seq(0.5, 1, by = 0.05),
+                                ntrees = seq(100,1000, by = 100))
+
+head(searchGridSubCol)
+
+```
+

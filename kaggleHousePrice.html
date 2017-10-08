@@ -123,21 +123,35 @@ $(document).ready(function () {
 </div>
 
 
+<div id="house-price-advanced-regression_ensemble-" class="section level2">
+<h2>House Price Advanced Regression_Ensemble 순서</h2>
+<ol style="list-style-type: decimal">
+<li>데이터 전처리</li>
+<li>학습을 위해 데이터 타입 변경</li>
+<li>알고리즘별 최적화 : XGBoost</li>
+<li>알고리즘별 최적화 : RandomForest</li>
+<li>알고리즘별 최적화 : SVM</li>
+<li>알고리즘별 최적화 : Keras</li>
+<li>Ensemble</li>
+<li>기타 : h2o Ensemble</li>
+</ol>
+</div>
 <div id="-" class="section level2">
-<h2>데이터 준비</h2>
-<div id="--train--test--." class="section level5">
-<h5>전처리가 끝난 train 과 test 데이터를 불러온다.</h5>
+<h2>1. 데이터 전처리</h2>
+<ul>
+<li>데이터 준비</li>
+<li>전처리가 끝난 train 과 test 데이터를 불러온다.</li>
+</ul>
 <pre class="r"><code>x.train &lt;- read.csv(&quot;C:/Users/bevis/Downloads/House_Prices_Advanced_Regression_Techniques/train_eda.csv&quot;)
 
 x.test &lt;- read.csv(&quot;C:/Users/bevis/Downloads/House_Prices_Advanced_Regression_Techniques/test_eda.csv&quot;)
 
 x.train &lt;- x.train[, -1]
 x.test &lt;- x.test[, -1]</code></pre>
-</div>
-<div id="train-data-" class="section level3">
-<h3>train data 파악</h3>
-<div id="int-factor-num--" class="section level5">
-<h5>int, factor, num 형태로 존재</h5>
+<ul>
+<li>train data 파악</li>
+<li>int, factor, num 형태로 존재</li>
+</ul>
 <pre class="r"><code>str(x.train)</code></pre>
 <pre><code>## 'data.frame':    1460 obs. of  82 variables:
 ##  $ MSSubClass      : int  60 20 60 70 60 50 20 60 50 190 ...
@@ -222,12 +236,10 @@ x.test &lt;- x.test[, -1]</code></pre>
 ##  $ total_sq_footage: int  2566 2524 2706 2473 3343 2158 3380 3197 2726 2068 ...
 ##  $ total_baths     : num  3.5 2.5 3.5 2 3.5 2.5 3 3.5 2 2 ...
 ##  $ SalePrice       : int  208500 181500 223500 140000 250000 143000 307000 200000 129900 118000 ...</code></pre>
-</div>
-</div>
-<div id="test-data-" class="section level3">
-<h3>test data 파악</h3>
-<div id="train-data--int-factor-num---alley----train-data--levelmissing------.--2--factor-level---." class="section level5">
-<h5>train data와 동일하게 int, factor, num 형태로 존재하나, $ Alley 와 같은 컬럼에서 train data에서 없었던 level(“missing”) 이 존재하는 경우를 파악할 수 있다. 따라서, 2개의 데이터간에 factor level을 맞추는 작업이 필요하다.</h5>
+<ul>
+<li>test data 파악</li>
+<li>train data와 동일하게 int, factor, num 형태로 존재하나, $ Alley 와 같은 컬럼에서 train data에서 없었던 level(“missing”) 이 존재하는 경우를 파악할 수 있다. 따라서, 2개의 데이터간에 factor level을 맞추는 작업이 필요하다.</li>
+</ul>
 <pre class="r"><code>str(x.test)</code></pre>
 <pre><code>## 'data.frame':    1459 obs. of  81 variables:
 ##  $ MSSubClass      : int  20 20 60 60 120 60 20 60 20 20 ...
@@ -312,15 +324,12 @@ x.test &lt;- x.test[, -1]</code></pre>
 ##  $ total_sq_footage: int  1778 2658 2557 2530 2560 2418 2355 2254 2641 1764 ...
 ##  $ total_baths     : num  1 1.5 2.5 2.5 2 2.5 3 2.5 2.5 2 ...</code></pre>
 </div>
-</div>
-</div>
 <div id="----" class="section level2">
-<h2>예측 분석을 위해 데이터 수정</h2>
-<div id="svm-randomforest" class="section level5">
-<h5>SVM, RandomForest</h5>
-</div>
-<div id="train-test-factor-level--" class="section level5">
-<h5>train, test factor level 맞춰 재생성</h5>
+<h2>2. 학습을 위해 데이터 타입 변경</h2>
+<ul>
+<li>학습에 사용될 알고리즘 : SVM, RandomForest</li>
+<li>train, test factor level 맞춰 재생성</li>
+</ul>
 <pre class="r"><code>if (!require(&quot;dplyr&quot;)) { install.packages(&quot;dplyr&quot;) }</code></pre>
 <pre><code>## Loading required package: dplyr</code></pre>
 <pre><code>## 
@@ -355,18 +364,12 @@ train_x &lt;- train_test %&gt;% .[1:ntrain,]
 test_x &lt;- train_test %&gt;% .[(ntrain + 1):nrow(train_test),]
 
 train_xy &lt;- cbind(train_x, SalePrice)</code></pre>
-</div>
-<div id="keras-xgboost" class="section level5">
-<h5>Keras, XGBoost</h5>
-</div>
-<div id="tensorflow---factor----.--2-.------10-------level----." class="section level5">
-<h5>tensorflow를 돌리기 위해선 factor(이산형 변수)의 타입을 수정해야 한다. 방법은 2가지가 있다. 이산형 변수 속성별로 컬럼을 생성하여 “1,0” 값으로 추가하는 방식 과 이산형 변수의 관측치(level) 값으로 변경하는 방식이 있다.</h5>
-</div>
-<div id="--factor-level----." class="section level5">
-<h5>수정 작업은 factor level 값으로 대체하는 방식을 택하였다.</h5>
-</div>
-<div id="train-test-factor-level---1" class="section level5">
-<h5>train, test factor level 맞춰 재생성</h5>
+<ul>
+<li>학습에 사용될 알고리즘 : Keras(tensorflow), XGBoost</li>
+<li>tensorflow를 돌리기 위해선 factor(이산형 변수)의 타입을 수정해야 한다. 방법은 2가지가 있다. 이산형 변수 속성별로 컬럼을 생성하여 “1,0” 값으로 추가하는 방식 과 이산형 변수의 관측치(level) 값으로 변경하는 방식이 있다.</li>
+<li>수정 작업은 factor level 값으로 대체하는 방식을 택하였다.</li>
+<li>train, test factor level 맞춰 재생성</li>
+</ul>
 <pre class="r"><code>## factor에서 numeric 변경 : Keras
 train_test_double &lt;- train_test
 
@@ -382,8 +385,8 @@ X_train &lt;- train_test_double %&gt;% .[1:ntrain,]
 X_test &lt;- train_test_double %&gt;% .[(ntrain + 1):nrow(train_test_double),]
 train_XY &lt;- cbind(X_train, SalePrice)</code></pre>
 </div>
-<div id="xgboost-" class="section level3">
-<h3>XGBoost 실행</h3>
+<div id="--xgboost" class="section level2">
+<h2>3. 알고리즘별 최적화 : XGBoost</h2>
 <pre class="r"><code>if (!require(&quot;xgboost&quot;)) { install.packages(&quot;xgboost&quot;) }</code></pre>
 <pre><code>## Loading required package: xgboost</code></pre>
 <pre><code>## 
@@ -393,6 +396,28 @@ train_XY &lt;- cbind(X_train, SalePrice)</code></pre>
 ##     slice</code></pre>
 <pre class="r"><code>dtrain &lt;- xgb.DMatrix(as.matrix(X_train), label = SalePrice)
 dtest &lt;- xgb.DMatrix(as.matrix(X_test))</code></pre>
+<div id="hyper-parameters-build-a-xgb.dmatrix-object" class="section level4">
+<h4>Hyper Parameters : Build a xgb.DMatrix object</h4>
+<div id="---httpsdatascience.stackexchange.comquestions9364hypertuning-xgboost-parameters" class="section level5">
+<h5>참고 - <a href="https://datascience.stackexchange.com/questions/9364/hypertuning-xgboost-parameters" class="uri">https://datascience.stackexchange.com/questions/9364/hypertuning-xgboost-parameters</a></h5>
+<ul>
+<li>subsample = “0.5, 0.55, 0.6, 0.65, … , 0.95, 1.0”</li>
+<li>colsample_bytree = “0.5, 0.55, 0.6, 0.65, … , 0.95, 1.0”</li>
+<li>ntrees = “100, 200, 300, … , 800, 900, 1000”</li>
+</ul>
+<pre class="r"><code>searchGridSubCol &lt;- expand.grid(subsample = seq(0.5, 1, by = 0.05),
+                                colsample_bytree = seq(0.5, 1, by = 0.05),
+                                ntrees = seq(100,1000, by = 100))
+
+head(searchGridSubCol)</code></pre>
+<pre><code>##   subsample colsample_bytree ntrees
+## 1      0.50              0.5    100
+## 2      0.55              0.5    100
+## 3      0.60              0.5    100
+## 4      0.65              0.5    100
+## 5      0.70              0.5    100
+## 6      0.75              0.5    100</code></pre>
+</div>
 </div>
 </div>
 
