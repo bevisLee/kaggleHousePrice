@@ -73,7 +73,6 @@ train_x <- train_test %>% .[1:ntrain,]
 test_x <- train_test %>% .[(ntrain + 1):nrow(train_test),]
 
 train_xy <- cbind(train_x, SalePrice)
-
 ```
 
 + 학습에 사용될 알고리즘 : Keras(tensorflow), XGBoost
@@ -98,7 +97,7 @@ X_test <- train_test_double %>% .[(ntrain + 1):nrow(train_test_double),]
 train_XY <- cbind(X_train, SalePrice)
 ```
 
-## 3. 알고리즘별 최적화 : XGBoost / LB : 0.20344
+## 3. 알고리즘별 최적화 : XGBoost / LB : 0.20220
 ```{r}
 if (!require("xgboost")) { install.packages("xgboost") }
 
@@ -155,8 +154,9 @@ rmseErrorsHyperparameters_xgb
 ```
 
 ##### Hyper Parameters 중 rmse가 가장 낮은 값을 예측 모델에 적용
-+ subsample : 0.95 / colsample_bytree : 0.55 / ntrees : 200 -> RMSE : 39869.81  
-####  XGBoost 예측 모델 실행 : 예측 모델 에러로 주석 처리
++ subsample : 0.95 / colsample_bytree : 0.55 / ntrees : 200 -> RMSE : 32415.44  
+
+####  XGBoost 예측 모델 실행
 
 ```{r}
 ### prediction---------------------------
@@ -164,22 +164,22 @@ currentSubsampleRate <- 0.95
 currentColsampleRate <- 0.55
 ntreesNum <- 200
 
-bst <- xgb.cv(data = dtrain, nrounds = ntreesNum, nfold = 5, showsd = TRUE,
+bst <- xgboost(data = dtrain, nrounds = ntreesNum, nfold = 5, showsd = TRUE,
               metrics = "rmse", verbose = TRUE, "eval_metric" = "rmse",
               "objective" = "reg:linear", "max.depth" = 15, "eta" = 2 / ntreesNum, "subsample" = currentSubsampleRate,
               "colsample_bytree" = currentColsampleRate, booster = "gbtree")
 
 ### prediction result save
-pred <- data.frame(test_id, xgb_pred <- predict(bst, dtest))
+pred <- data.frame(test_id,xgb_pred <- predict(bst, dtest))
 colnames(pred) <- c("Id", "SalePrice")
 
 write.csv(pred, paste0("C:/Users/bevis/Downloads/House_Prices_Advanced_Regression_Techniques/xgb_Hyper_Parameters", format(Sys.time(), "%Y%b%d_%H%M%S"), ".csv ", sep = " "), quote = F, row.names = F)
 
 ```
 
-####  XGBoost 예측 결과 LB Score : 0.20344
+####  XGBoost 예측 결과 LB Score : 0.20220
 
-## 4. 알고리즘별 최적화 : RandomForest / LB : 0.14645
+## 4. 알고리즘별 최적화 : RandomForest / LB : 0.14674
 
 ```{r}
 if (!require("randomForest")) { install.packages("randomForest") }
@@ -245,7 +245,7 @@ colnames(pred) <- c("Id","SalePrice")
 
 write.csv(pred, paste0("C:/Users/bevis/Downloads/House_Prices_Advanced_Regression_Techniques/rf_Hyper_Parameters", format(Sys.time(), "%Y%b%d_%H%M%S"), ".csv ", sep = " "), quote = F, row.names = F)
 ```
-####  RandomForest 예측 결과 LB Score : 0.14645
+####  RandomForest 예측 결과 LB Score : 0.14674
 
 ## 5. 알고리즘별 최적화 : Support Vector Machines / LB : 0.43200
 
