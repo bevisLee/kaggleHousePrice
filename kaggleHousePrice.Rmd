@@ -1,0 +1,100 @@
+---
+title: "House Price Advanced Regression_Ensemble"
+author: "이춘호"
+date: "2017년 10월 8일"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 데이터 준비
+##### 전처리가 끝난 train 과 test 데이터를 불러온다.
+
+```{r}
+x.train <- read.csv("C:/Users/bevis/Downloads/House_Prices_Advanced_Regression_Techniques/train_eda.csv")
+
+x.test <- read.csv("C:/Users/bevis/Downloads/House_Prices_Advanced_Regression_Techniques/test_eda.csv")
+
+x.train <- x.train[, -1]
+x.test <- x.test[, -1]
+```
+
+### train data 파악
+##### int, factor, num 형태로 존재
+
+```{r}
+str(x.train)
+```
+
+### test data 파악
+##### train data와 동일하게 int, factor, num 형태로 존재하나, $ Alley 와 같은 컬럼에서 train data에서 없었던 level("missing") 이 존재하는 경우를 파악할 수 있다. 따라서, 2개의 데이터간에 factor level을 맞추는 작업이 필요하다.
+
+```{r}
+str(x.test)
+```
+
+## 예측 분석을 위해 데이터 수정
+##### SVM, RandomForest
+##### train, test factor level 맞춰 재생성
+
+```{r warning=FALSE}
+if (!require("dplyr")) { install.packages("dplyr") }
+
+SalePrice <- x.train[, 82]
+
+train_df_model <- x.train[, 1:81]
+test_df <- x.test
+test_id <- c(1461:2919)
+
+train_test <- bind_rows(train_df_model, test_df) ## 합치면서 character 컬럼이 생김
+ntrain <- nrow(train_df_model)
+
+features <- names(x.train)
+
+#convert character into factor : character 컬럼 factor 수정
+for (f in features) {
+    if (is.character(train_test[[f]])) {
+        levels = sort(unique(train_test[[f]]))
+        train_test[[f]] = as.integer(factor(train_test[[f]], levels = levels))
+    }
+}
+
+#splitting whole data back again
+train_x <- train_test %>% .[1:ntrain,]
+test_x <- train_test %>% .[(ntrain + 1):nrow(train_test),]
+
+train_xy <- cbind(train_x, SalePrice)
+
+```
+
+##### Keras, XGBoost
+##### tensorflow를 돌리기 위해선 factor(이산형 변수)의 타입을 수정해야 한다. 방법은 2가지가 있다. 이산형 변수 속성별로 컬럼을 생성하여 "1,0" 값으로 추가하는 방식 과 이산형 변수의 관측치(level) 값으로 변경하는 방식이 있다.
+##### 수정 작업은 factor level 값으로 대체하는 방식을 택하였다. 
+##### train, test factor level 맞춰 재생성
+
+```{r warning=FALSE}
+## factor에서 numeric 변경 : Keras
+train_test_double <- train_test
+
+for (f in features) {
+    if (is.factor(train_test_double[[f]])) {
+        levels = sort(unique(train_test_double[[f]]))
+        train_test_double[[f]] = as.numeric(train_test_double[[f]], levels = levels)
+    }
+}
+
+#splitting whole data back again
+X_train <- train_test_double %>% .[1:ntrain,]
+X_test <- train_test_double %>% .[(ntrain + 1):nrow(train_test_double),]
+train_XY <- cbind(X_train, SalePrice)
+```
+
+### XGBoost 실행
+```{r}
+if (!require("xgboost")) { install.packages("xgboost") }
+
+dtrain <- xgb.DMatrix(as.matrix(X_train), label = SalePrice)
+dtest <- xgb.DMatrix(as.matrix(X_test))
+```
