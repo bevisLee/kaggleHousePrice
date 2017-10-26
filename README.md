@@ -1,4 +1,6 @@
 # kaggleHousePrice
 
-* https://www.kaggle.com/c/house-prices-advanced-regression-techniques
-* Ensembel - https://bevislee.github.io/kaggleHousePrice/kaggleHousePrice.html
+* Kaggle - https://www.kaggle.com/c/house-prices-advanced-regression-techniques
+
+* Result - https://bevislee.github.io/kaggleHousePrice/kaggleHousePrice.html
+* Hyper_XGB -https://bevislee.github.io/kaggleHousePrice/hyper_xgb.html
