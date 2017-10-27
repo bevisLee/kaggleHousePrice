@@ -17,7 +17,8 @@ output: html_document
 
 #### 3. 알고리즘별 최적화(09/24 ~ 10/14) : 예측 모델에 적용하고 싶은 알고리즘 파악 및 진행 결과 공유
   * 데이터 사용
-	  + Train data : 제공된 train data의 70% 사용 / Validation data : 제공된 train data의 30% 사용 -> 알고리즘별로 가장 적은 RSME 파악에 사용
+	  + Train data : 제공된 train data의 70% 사용
+	  + Validation data : 제공된 train data의 30% 사용 -> 알고리즘별로 가장 적은 RSME 파악에 사용
 	  + Test data : 제공된 test data 사용
   * XGBoost
   * GBM
@@ -33,9 +34,9 @@ output: html_document
 * 전처리가 끝난 train 과 test 데이터를 불러온다.
 
 ```{r}
-x.train <- read.csv("C:/Users/bevis/Downloads/House_Prices_Advanced_Regression_Techniques/train_eda.csv")
+x.train <- read.csv("C:/Users/bevis/Downloads/kaggle_House_Prices_Advanced_Regression_Techniques/train_eda.csv")
 
-x.test <- read.csv("C:/Users/bevis/Downloads/House_Prices_Advanced_Regression_Techniques/test_eda.csv")
+x.test <- read.csv("C:/Users/bevis/Downloads/kaggle_House_Prices_Advanced_Regression_Techniques/test_eda.csv")
 
 x.train <- x.train[, -1]
 x.test <- x.test[, -1]
@@ -149,7 +150,7 @@ head(searchGridSubCol)
 ```
 
 ##### Hyper Parameters 중 Validation data의 "RMSE" 가장 낮은 값을 예측 모델에 적용
-* XGboost Hyper Parameter 세부 페이지(업데이트 예정) - https://bevislee.github.io/kaggleHousePrice/hyper_xgb.html
+* XGboost Hyper Parameter 세부 페이지 - https://bevislee.github.io/kaggleHousePrice/hyper_xgb.html
 
 ```{r}
 ##       i     rmse currentSubsampleRate currentColsampleRate ntreesNummin_child_weight_num gamma_num
@@ -245,13 +246,15 @@ head(searchGridSubCol)
 ```
 
 ##### Hyper Parameters 중 Validation data의 "RMSE" 가장 낮은 값을 예측 모델에 적용
-* GBM Hyper Parameter 세부 페이지(업데이트 예정) - https://bevislee.github.io/kaggleHousePrice/hyper_gbm.html
+* GBM Hyper Parameter 세부 페이지 - https://bevislee.github.io/kaggleHousePrice/hyper_gbm.html
 
 * Hyper Parameter 결과
-
+	+ interaction.depth를 늘려 RMSE를 낮췄으나, LB Score는 증가하여, LB 스코어 기준으로 높은 값을 사용
+	
 ```{r}
 # ntrees : 2000 / shrinkage : 0.05 / n.minobsinnode : 10 / interaction.depth : 5 / rmse : 25048.87 -> LB : 0.12840
-# ntrees : 1600 / shrinkage : 0.01 / n.minobsinnode : 20 / interaction.depth : 10 / rmse : 25048.87 -> LB : 0.12655
+# ntrees : 1600 / shrinkage : 0.01 / n.minobsinnode : 20 / interaction.depth : 10 / rmse : 23776.96 -> LB : 0.12655
+# ntrees : 1500 / shrinkage : 0.01 / n.minobsinnode : 19 / interaction.depth : 48 / rmse : 23518.88 -> LB : 0.12737
 ```
 
 ##### Validation 예측 실행
@@ -260,7 +263,7 @@ head(searchGridSubCol)
 ntreesNum <- 1600
 shrinkage_num <- 0.01
 n.minobsinnode_num <- 20
-interaction.depth_num <- 10 
+interaction.depth_num <- 10
 
 gbmModel <- gbm(formula = SalePrice ~.,
 			          data = Training_xy,
@@ -366,7 +369,7 @@ head(alpha)
 ```
 
 #### Hyper Parameters 중 Validation data의 "RMSE" 가장 낮은 값을 예측 모델에 적용
-* LASSO Hyper Parameter 세부 페이지(업데이트 예정) - https://bevislee.github.io/kaggleHousePrice/hyper_lasso.html
+* LASSO Hyper Parameter 세부 페이지 - https://bevislee.github.io/kaggleHousePrice/hyper_lasso.html
 
 * Hyper Parameter 결과
 
@@ -433,7 +436,7 @@ head(searchGridSubCol)
 ```
 
 ##### Hyper Parameters 중 Validation data의 "RMSE" 가장 낮은 값을 예측 모델에 적용
-* RF Hyper Parameter 세부 페이지(업데이트 예정) - https://bevislee.github.io/kaggleHousePrice/hyper_rf.html
+* RF Hyper Parameter 세부 페이지 - https://bevislee.github.io/kaggleHousePrice/hyper_rf.html
 
 * Hyper Parameter 결과
 
@@ -747,15 +750,45 @@ actual_price = np$array(as.matrix(data.frame(SalePrice)))
 n_x = nrow(preds_train)
 m = ncol(preds_train)
 
+##-----
+# n_x : 1개 샘플 요소의 크기
+# m : 회귀 모델 수
+# P : Placeholder for P
+# Y : placeholder for Y
+##-----
+
 P <- tf$placeholder(tf$float32, name = "Preds", shape = list(n_x, m))
 Y <- tf$placeholder(tf$float32, name = "Price", shape = list(n_x, 1))
+
+##-----
+# m : 모델 수
+# A : vector of parameters
+##-----
+
 A <- tf$get_variable(name = "Params", dtype = tf$float32,
 						 initializer = tf$constant(np$array(matrix(c(1:m), ncol = 1, nrow = m)), dtype = tf$float32))
+
+##-----
+# P : 누적 된 예측의 행렬
+# A : vector of parameters
+# Y(actual_price) : 실제 가격(Train Data의 SalePrice)
+# lmbda - 정규화 매게 변수
+# loss : mean squared error + L1-regularazation
+##-----
 
 # loss
 prediction <- tf$matmul(P, A) / tf$reduce_sum(A)
 lmbda = 0.8
+
+# L1-regularazation has shown better score on LB than L2
 loss = tf$reduce_mean(tf$squared_difference(prediction, Y)) + lmbda * tf$reduce_mean(tf$abs(A))
+
+##-----
+# pred(P) : 예측 가격의 행렬
+# actual_price(Y) : 실제 가격(Train Data의 SalePrice)
+# num_iterations : 반복 횟수
+# parameters : vector A for WAP
+##-----
 
 # optimizer
 optimizer = tf$train$GradientDescentOptimizer(learning_rate = 0.01)$minimize(loss)
@@ -796,6 +829,7 @@ for (i in 1:nrow(pred_test)) {
 
 op = np$array(as.matrix(op))
 
+# WAP = np.squeeze(np.dot(preds, params) / np.sum(params)) 
 WAP = np$squeeze(op / np$sum(params))
 
 WAP <- exp(WAP)
@@ -839,10 +873,16 @@ head(pred)
 ## 결론
 
 ##### LB Score 결과
-* 1st : 알고리즘별 LB Score 기준 사용자 비율 적용
-* 2nd : Tensorflow를 이용한 앙상블
-* 3rd : 알고리즘 Validation Data RSME 최소값인 비율 적용
-* 4th : 알고리즘 Validation Data 예측 평균 적용
+
+* 1st : 0.12107 / 알고리즘별 LB Score 기준 사용자 비율 적용
+* 2nd : 0.12123 / Tensorflow를 이용한 앙상블 (XGBoost + GBM)
+* 3rd : 0.12188 / 알고리즘 Validation Data RSME 최소값인 비율 적용 (XGBoost + GBM)
+* 4th : 0.12215 / XGBoost
+* 5th : 0.12218 / 알고리즘 Validation Data RSME 최소값인 비율 적용 (전체) 
+* 6th : 0.12655 / GBM
+* 7th : 0.14295 / RandomForest
+* 8th : 0.15485 / LASSO
+* 9th : 0.69925 / 알고리즘 Validation Data 예측 평균 적용 (전체) 
 
 ##### 여러 알고리즘 보다는 LB Score가 높은 알고리즘만으로 앙상블 적용했을 때 더 높은 Rank 기록
 
